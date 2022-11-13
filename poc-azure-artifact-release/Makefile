@@ -5,19 +5,21 @@ disable-hooks:
 install: disable-hooks ## Install the poetry environment and install the pre-commit hooks
 	@echo "🚀 Creating virtual environment using pyenv and poetry"
 	@poetry install
+	@poetry run pip install -U pip wheel setuptools
 	@poetry run pre-commit install
 	@poetry shell
 
 check: ## Lint and check code by running black, isort, flake8, mypy and deptry.
 	@echo "🚀 Checking Poetry lock file consistency with 'pyproject.toml': Running poetry lock --check"
 	@poetry lock --check
+	@echo "🚀 Show outdated project packages"
+	@poetry run pip list --outdated
 	@echo "🚀 Linting code: Running pre-commit"
 	@poetry run pre-commit run -a
 	@echo "🚀 Checking code formatting: Running mypy"
 	@poetry run mypy
 	@echo "🚀 Checking for obsolete dependencies: Running deptry"
 	@poetry run deptry .
-
 
 test: ## Test the code with pytest
 	@echo "🚀 Testing code: Running pytest"
