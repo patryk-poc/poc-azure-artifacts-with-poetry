@@ -1,17 +1,94 @@
+# Microsoft hosted runner uses the following version of software installed:
+# https://github.com/actions/runner-images/blob/main/images/linux/Ubuntu2204-Readme.md
+
+name: Test Azure Pipeline with publishing poetry packages to Azure Artifacts feed
+
 trigger:
-- master
+  branches:
+    include:
+      - master
+      - feature/*
+  paths:
+    exclude:
+      - '*.md'
+  tags:
+    include:
+      - refs/tags/*
+pr:
+  branches:
+    include:
+      - master
+
 
 pool:
-  vmImage: ubuntu-latest
+  vmImage: ubuntu-22.04
 
-steps:
-- script: |
-    pwd
-    uname -a
-    env
-  displayName: Show agent environment 
+variables:
+  feedName: kpatryk
+  package: poc-azure-artifact-release
 
-- script: |
-    echo Add other tasks to build, test, and deploy your project.
-    echo See https://aka.ms/yaml
-  displayName: 'Run a multi-line script'
+parameters:
+- name: coverage
+  displayName: Run Code-Coverage?
+  type: boolean
+  default: true
+
+stages:
+  - stage: Test
+    jobs:
+    - job: Check
+      steps:
+      - bash: |
+          pwd
+          uname -a
+          hostname
+          printenv | sort
+        displayName: Show agent environment
+
+  - stage: Package_And_Publish
+    jobs:
+    - job: Setup
+      steps:
+        - task: UsePythonVersion@0
+          inputs:
+            versionSpec: '3.9'
+
+        - bash: |
+            curl -sSL https://install.python-poetry.org | python3 -
+            which poetry && poetry --version
+            make install-twine
+          workingDirectory: $(package)
+          displayName: Install poetry and prepare for build and release
+
+        - script: |
+            echo Building $(Build.Buildnumber) ..
+          displayName: Run code coverage?
+        - ${{ if eq(parameters.coverage, true) }}:
+          - bash: |
+              poetry run pytest --cov
+              cat codecov.yaml
+            displayName: Get code coverage report
+            workingDirectory: $(package)
+          - bash: |
+              curl -Os https://uploader.codecov.io/latest/linux/codecov
+              chmod +x codecov && ./codecov
+            displayName: Upload coverage reports to Codecov
+            workingDirectory: $(package)
+
+        - task: TwineAuthenticate@1
+          displayName: Twine Authenticate
+          inputs:
+            artifactFeed: $(feedName)
+
+        - bash: |
+            VERSION=$(grep '^version' pyproject.toml  | grep -o '[0-9].[0-9].[0-9]')
+            echo "##vso[task.setvariable variable=VERSION]$VERSION"
+          workingDirectory: $(package)
+          displayName: Set project version
+
+        - bash: |
+            echo "Publishing version = $(VERSION)"
+            make build
+            poetry run twine upload -r $(feedName) --config-file $(PYPIRC_PATH) --verbose --skip-existing dist/*
+          workingDirectory: $(package)
+          displayName: Publish to Azure Artifacts

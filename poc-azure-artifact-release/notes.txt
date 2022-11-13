@@ -1,0 +1,1 @@
+[![Build Status](https://dev.azure.com/kpatryk/Playground/_apis/build/status/patryk-poc/test-azure-pipeline)](https://dev.azure.com/kpatryk/Playground/_build/latest?definitionId=1)
