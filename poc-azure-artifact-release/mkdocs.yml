@@ -1,0 +1,30 @@
+site_name: poc-azure-artifact-release
+repo_url: https://github.com/kpatryk/poc-azure-artifact-release
+site_url: https://kpatryk.github.io/poc-azure-artifact-release
+site_description: This is a template repository for Python projects that use Poetry for their dependency management.
+site_author: Patryk Kubiak
+
+nav:
+  - Home: index.md
+  - Modules: modules.md
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+            setup_commands:
+                - import sys
+                - sys.path.append('../')
+copyright: Maintained by Patryk Kubiak.
+theme:
+  name: material
+  feature:
+    tabs: true
+  palette:
+    primary: white
+    accent: blue
+markdown_extensions:
+  - toc:
+      permalink: true
+  - pymdownx.arithmatex:
+      generic: true
