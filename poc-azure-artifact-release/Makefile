@@ -25,19 +25,18 @@ test: ## Test the code with pytest
 	@echo "🚀 Testing code: Running pytest"
 	@poetry run pytest --cov --cov-config=pyproject.toml --cov-report=xml
 
-build: clean-build ## Build wheel file using poetry
-	@echo "🚀 Creating wheel file"
-	@poetry build
-
 clean-build: ## clean build artifacts
 	@rm -rf dist
 
-publish: ## Publish to the Artifactory repository using poetry. Requires ARTIFACTORY_TOKEN for DPS-FF-ILO to be set.
-	@echo "🚀 Publishing: Dry run."
-	@poetry config repositories.artifactory $(ARTIFACTORY_URL)
-	@poetry publish --repository artifactory --username $(ARTIFACTORY_USERNAME) --password $(ARTIFACTORY_PASSWORD) --dry-run
-	@echo "🚀 Publishing."
-	@poetry publish --repository artifactory --username $(ARTIFACTORY_USERNAME) --password $(ARTIFACTORY_PASSWORD)
+build: clean-build ## Build wheel file using poetry
+	@echo "🚀 Creating wheel file"
+	@poetry build
+	@echo "🚀 Checking artifacts created in the previous step"
+	@poetry run twine check dist/*
+
+publish:  ## Publish package to Azure Artifact
+	@echo "🚀 Publishing packge to Azure Artifacts "
+	@poetry run twine upload -r kpatryk dist/*
 
 build-and-publish: build publish ## Build and publish.
 
