@@ -2,12 +2,14 @@
 disable-hooks:
 	@git config --global --unset core.hooksPath || true
 
-install: disable-hooks ## Install the poetry environment and install the pre-commit hooks
+install-twine: ## Install only tools required to build & publish to Azure Artifacts
+	@poetry install --only=artifacts
+
+install: disable-hooks install-twine ## Install the poetry environment and install the pre-commit hooks
 	@echo "🚀 Creating virtual environment using pyenv and poetry"
 	@poetry install
 	@poetry run pip install -U pip wheel setuptools
 	@poetry run pre-commit install
-	@poetry shell
 
 check: ## Lint and check code by running black, isort, flake8, mypy and deptry.
 	@echo "🚀 Checking Poetry lock file consistency with 'pyproject.toml': Running poetry lock --check"

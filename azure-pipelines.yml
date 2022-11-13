@@ -1,17 +1,70 @@
+# Microsoft hosted runner uses the following version of software installed:
+# https://github.com/actions/runner-images/blob/main/images/linux/Ubuntu2204-Readme.md
+
+# To check: https://learn.microsoft.com/en-us/azure/devops/pipelines/process/set-variables-scripts?view=azure-devops&tabs=bash
+
+name: Test Azure Pipeline with publishing poetry packages to Azure Artifacts feed
+
 trigger:
 - master
+- feature/*
 
 pool:
-  vmImage: ubuntu-latest
+  vmImage: ubuntu-22.04
 
-steps:
-- script: |
-    pwd
-    uname -a
-    env
-  displayName: Show agent environment 
+variables:
+  package: poc-azure-artifact-release
 
-- script: |
-    echo Add other tasks to build, test, and deploy your project.
-    echo See https://aka.ms/yaml
-  displayName: 'Run a multi-line script'
+parameters:
+- name: coverage
+  displayName: Run Code-Coverage?
+  type: boolean
+  default: false
+
+stages:
+  - stage: Test
+    jobs:
+      # - job: Check
+      #   steps:
+      #   - bash: |
+      #       pwd
+      #       uname -a
+      #       hostname
+      #       printenv | sort
+      #     displayName: Show agent environment
+
+      - job: Setup
+        steps:
+          - task: UsePythonVersion@0
+            inputs:
+              versionSpec: '3.9'
+          # - bash: |
+          #     curl -sSL https://install.python-poetry.org | python3 -
+          #     which poetry && poetry --version
+          #     make install-twine
+          #   workingDirectory: $(package)
+          #   displayName: Install poetry and prepare for build and release
+          - script: echo Building $(Build.Buildnumber) ..
+            displayName: Run code coverage?
+          - ${{ if eq(parameters.coverage, true) }}:
+            - bash: |
+                poetry run pytest --cov
+                ls -l
+                cat codecov.yaml
+              displayName: Get code coverage report
+              workingDirectory: $(package)
+            - bash: |
+                curl -Os https://uploader.codecov.io/latest/linux/codecov
+                chmod +x codecov && ./codecov
+              displayName: Upload coverage reports to Codecov
+              workingDirectory: $(package)
+          - bash: |
+              VERSION=$(grep '^version' pyproject.toml  | grep -o   '[0-9].[0-9].[0-9]')
+              echo "##vso[task.setvariable variable=VERSION]$VERSION"
+            workingDirectory: $(package)
+            displayName: Release to Azure Artifacts
+          - bash: |
+              echo "VERSION = $(VERSION)"
+          # - bash: make check test
+          #   displayName: Run linter and tests
+          #   workingDirectory: $(package)
